@@ -138,7 +138,10 @@ disable=print-statement,
         no-name-in-module,
         useless-option-value,
         unrecognized-option,
-        unknown-option-value
+        unknown-option-value,
+        redefined-outer-name,
+        invalid-name,
+        pointless-string-statement
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
@@ -410,6 +413,7 @@ good-names=i,
            k,
            ex,
            Run,
+           tx
            _
 
 # Include a hint for the correct naming format with invalid-name

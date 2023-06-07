@@ -21,15 +21,15 @@ enum Status:
     # сделка завершена
     DONE
 
-owner: address
+owner: public(address)
 
 blueprint: public(address)
 
 event EscrowCreated:
     contract: address
-    buyer: indexed(address)
     seller: indexed(address)
-    value: indexed(uint256)
+    buyer: indexed(address)
+    value: uint256
     expiration_time: uint256
 
 
@@ -41,9 +41,9 @@ def __init__(_blueprint: address):
 
 @external
 def create_escrow(
-    _seller: address,
-    _buyer: address, 
-    _arbiter: address,
+    _seller: address, 
+    _buyer: address,  
+    _arbiter: address, 
     _value: uint256, 
     _expiration_seconds: uint256
 ) -> address:
@@ -54,10 +54,9 @@ def create_escrow(
         _buyer,
         _arbiter, 
         _value, 
-        _expiration_seconds, 
-        code_offset=len("FE7100")
+        _expiration_seconds
     )
-
-    log EscrowCreated(escrow_addr, _buyer, _seller, _value, _expiration_seconds)
+    
+    log EscrowCreated(escrow_addr, _seller, _buyer, _value, _expiration_seconds)
 
     return escrow_addr
