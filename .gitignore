@@ -4,5 +4,4 @@ __pycache__
 .hypothesis/
 build/
 reports/
-scripts/
 .DS_Store
