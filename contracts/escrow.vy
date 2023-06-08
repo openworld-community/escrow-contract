@@ -77,7 +77,7 @@ def deposit():
     @notice покупатель вносит депозит на контракт и ожидает выполнения условий сделки от продавца
     """
     assert self.status == Status.WAIT_BUYER_DEPOSIT and msg.sender == self.buyer, "failed preconditions"
-    assert msg.value >= self.value, "buyer must deposit full value of deal"
+    assert msg.value == self.value, "buyer must deposit full value of deal"
     self.status = Status.WAIT_SELLER_SERVICE
 
     log StatusTransition(Status.WAIT_BUYER_DEPOSIT, Status.WAIT_SELLER_SERVICE, msg.sender)
