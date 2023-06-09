@@ -14,5 +14,3 @@ def main():
     blueprint = Factory.deploy(SEPOLIA_BLUEPRINT, {'from': acc.address})
     print(blueprint.address)
 
-
-main()
