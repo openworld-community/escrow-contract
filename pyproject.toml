@@ -9,6 +9,10 @@ packages = [{include = "escrow_contract"}]
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"
 eth-brownie = "^1.19.3"
+install = "^1.3.5"
+motor-types = "^1.0.0b2"
+python-jose = "^3.3.0"
+jose = "^1.0.0"
 
 
 [build-system]
