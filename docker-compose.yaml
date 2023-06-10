@@ -23,7 +23,7 @@ services:
         "3001"
       ]
   mongo:
-    image: mongo
+    image: mongo:4.4.6
     restart: always
     expose:
       - "27017"
