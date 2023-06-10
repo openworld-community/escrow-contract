@@ -30,7 +30,6 @@ async def get_nonce(address: str):
     usr = await user.find_by_address(address)
     if usr is None:
         raise HTTPException(status_code=404, detail="User not found")
-    await user.update_nonce(address)
     return {"address": address, "nonce": usr.nonce}
 
 

@@ -5,7 +5,23 @@
 @author Maxson-dev
 """
 
-import escrow as Escrow 
+
+interface Escrow:
+    def approve_deal_terms(): nonpayable
+    def deposit(): payable
+    def confirm_service(): nonpayable
+    def approve_receipt(): nonpayable
+    def start_dispute(): nonpayable
+    def refund_to_buyer(): nonpayable
+    def payout_to_seller(): nonpayable
+    def withdraw(): nonpayable
+    def seller() -> address: view
+    def buyer() -> address: view
+    def arbiter() -> address: view
+    def value() -> uint256: view
+    def expired_at() -> uint256: view
+    def status() -> Status: view
+
 
 enum Status:
     # покупатель создал сделку и ждет апрува от продавца
@@ -47,16 +63,12 @@ def create_escrow(
     _value: uint256, 
     _expiration_seconds: uint256
 ) -> address:
-
-    escrow_addr: address = create_from_blueprint(
+    return create_from_blueprint(
         self.blueprint,
         _seller, 
         _buyer,
         _arbiter, 
         _value, 
-        _expiration_seconds
+        _expiration_seconds,
+        code_offset=3
     )
-    
-    log EscrowCreated(escrow_addr, _seller, _buyer, _value, _expiration_seconds)
-
-    return escrow_addr

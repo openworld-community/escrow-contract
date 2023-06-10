@@ -43,9 +43,9 @@ def __init__(
     _value: uint256,
     _expiration_seconds: uint256
 ):
-    assert msg.sender == _buyer or msg.sender == _seller, "Escrow can be created only by buyer or seller!"
+    assert tx.origin == _buyer or tx.origin == _seller, "Escrow can be created only by buyer or seller!"
 
-    if msg.sender == _buyer:
+    if tx.origin == _buyer:
         # если покупатель создал сделку, он ждет аппрува от продавца 
         self.status = Status.WAIT_SELLER_APPROVE
     else:
