@@ -1,0 +1,12 @@
+Brownie==0.5.1
+eth_account==0.5.9
+fastapi==0.96.0
+jose==1.0.0
+motor==3.1.2
+pydantic==1.10.9
+pymongo==4.3.3
+pytest==7.3.1
+python-dotenv==1.0.0
+vyper==0.3.9
+web3==5.31.1
+pycryptodome==3.10.1

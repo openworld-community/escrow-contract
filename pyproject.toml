@@ -4,7 +4,6 @@ version = "0.1.0"
 description = ""
 authors = ["maxson-dev"]
 readme = "README.md"
-packages = [{include = "escrow_contract"}]
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11"

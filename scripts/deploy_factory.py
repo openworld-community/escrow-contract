@@ -1,7 +1,7 @@
 from brownie import accounts, factory as Factory, web3 as w3
 from vyper import compiler
 
-SEPOLIA_BLUEPRINT = '0x9d8ccA9F0789144e2276FBED1954cab5a173726D'
+SEPOLIA_BLUEPRINT = '0x2228283f5682AeE138a566C80fC8911de6BC91c2'
 
 def main():
     acc = accounts.load('sepolia_deploy')
