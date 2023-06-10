@@ -11,6 +11,6 @@ app = FastAPI()
 app.include_router(router=user.router)
 app.include_router(router=chat.router)
 
-app.get("/env/{key}")
+@app.get("/env/{key}")
 async def get_env(key: str):
     return os.getenv(key)
