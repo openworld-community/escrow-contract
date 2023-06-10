@@ -19,4 +19,4 @@ RUN poetry config virtualenvs.create false \
 
 RUN pip install uvicorn
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "3001"]
