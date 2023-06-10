@@ -45,5 +45,5 @@ services:
       ME_CONFIG_MONGODB_ADMINPASSWORD: example
       ME_CONFIG_MONGODB_URL: mongodb://root:example@mongo:27017
     volumes:
-      - /home/mongodb:/home/mongodb
+      - /home/mongo:/home/mongodb
       - /var/data/mongo:/data/db
