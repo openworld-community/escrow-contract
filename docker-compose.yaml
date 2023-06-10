@@ -13,6 +13,8 @@ services:
     ports:
       - "3001:3001"
     working_dir: /app/api
+    env_file:
+      - /app/api/.env
     command:
       [
         "uvicorn",
@@ -33,6 +35,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
+
 
   mongo-express:
     user: root
