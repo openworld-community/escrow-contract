@@ -32,8 +32,9 @@ class UserConnect():
     def __init__(self, ws, user):
         self.ws = ws
         self.user = user
-        ws: WebSocket
-        user: User
+        
+    ws: WebSocket
+    user: User
 
 
 active_rooms: dict[str, list[UserConnect] | None] = dict()
