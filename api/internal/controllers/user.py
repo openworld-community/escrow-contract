@@ -18,10 +18,12 @@ router = APIRouter(
 
 
 @router.put("/")
-async def update_user(dto: UpdateUserDto) -> User:
-    usr = await user.find_by_address(dto.address)
-    if usr is None:
-        raise HTTPException(status_code=404, detail="User not found")
+async def update_user(
+    dto: UpdateUserDto,
+    current_user: Annotated[User, Depends(get_current_user)]
+) -> User:
+    if current_user.address.lower() is not dto.address.lower():
+        return HTTPException(status_code=403, detail="FORBIDEN")
     return await user.update_one(dto)
 
 
