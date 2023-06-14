@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, HTTPException, Depends, status
 from ..db import user
-from ..models.user import User, CreateUser
+from ..models.user import User, CreateUserDto, UpdateUserDto
 from ..models.auth import Sign
 
 from ..auth.jwt import authenticate_user, create_access_token, get_current_user
@@ -17,8 +17,16 @@ router = APIRouter(
 )
 
 
+@router.put("/")
+async def update_user(dto: UpdateUserDto) -> User:
+    usr = await user.find_by_address(dto.address)
+    if usr is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    return await user.update_one(dto)
+
+
 @router.post("/")
-async def create_user(create_user: CreateUser) -> User:
+async def create_user(create_user: CreateUserDto) -> User:
     old_user = await user.find_by_address(create_user.address)
     if old_user is not None:
         return old_user
@@ -48,6 +56,7 @@ async def login_for_access_token(sig: Sign):
         data={"sub": user.address}, expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
+
 
 @router.get("/me")
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
