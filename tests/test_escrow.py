@@ -1,3 +1,4 @@
+from telnetlib import DO
 import pytest
 from brownie import escrow as Escrow, factory as Factory, accounts, web3, network, chain, reverts
 
@@ -23,6 +24,7 @@ VALUE = 100000000
 EXPIRATION_SECONDS = 86400
 
 FAIL = 'failed preconditions'
+DEPOSIT_FAILURE = "buyer must deposit full value of deal"
 
 
 @pytest.fixture
@@ -53,7 +55,7 @@ def test_buyer_escrow(buyer_escrow):
     assert be.expired_at() == chain[-1].timestamp + EXPIRATION_SECONDS
     assert be.value() == VALUE
     assert be.status() == WAIT_SELLER_APPROVE
-
+    print(chain[-1].timestamp + EXPIRATION_SECONDS)
     with reverts(FAIL):
         be.approve_deal_terms({'from': BUYER})
     with reverts(FAIL):
@@ -71,7 +73,7 @@ def test_buyer_escrow(buyer_escrow):
 
     with reverts(FAIL):
         be.deposit({'from': SELLER, 'value': VALUE})
-    with reverts('buyer must deposit full value of deal'):
+    with reverts(DEPOSIT_FAILURE):
         be.deposit({'from': BUYER, 'value': VALUE-1})
 
     buyer_deposit_tx = be.deposit({'from': BUYER, 'value': VALUE})
@@ -147,3 +149,71 @@ def check_status_transition(s_from, s_to, actor, evts):
 @pytest.fixture
 def seller_escrow():
     yield Escrow.deploy(SELLER, BUYER, ARBITER, VALUE, EXPIRATION_SECONDS, {'from': SELLER})
+
+def test_seller_escrow(seller_escrow):
+    se = seller_escrow
+    assert se.buyer() == BUYER
+    assert se.seller() == SELLER
+    assert se.arbiter() == ARBITER
+    assert se.expired_at() == chain[-1].timestamp + EXPIRATION_SECONDS
+    assert se.value() == VALUE
+    assert se.status() == WAIT_BUYER_DEPOSIT
+    print(chain[-1].timestamp)
+    with reverts(FAIL):
+        se.deposit({"from": SELLER, "value": VALUE})
+    with reverts(DEPOSIT_FAILURE):
+        se.deposit({"from": BUYER, "value": VALUE-1})
+    
+    buyer_deposit_tx = se.deposit({"from": BUYER, "value": VALUE})
+    assert se.balance() == VALUE
+    assert se.status() == WAIT_SELLER_SERVICE
+
+    check_status_transition(
+        WAIT_BUYER_DEPOSIT,
+        WAIT_SELLER_SERVICE,
+        BUYER,
+        buyer_deposit_tx.events
+    )
+
+    revert_all_withdraw(se)
+
+    with reverts(FAIL):
+        se.confirm_service({"from": BUYER})
+    with reverts(FAIL):
+        se.confirm_service({"from": ARBITER})
+    
+    seller_confirm_service_tx = se.confirm_service({"from": SELLER})
+    assert se.status() == WAIT_BUYER_APPROVE
+    assert se.balance() == VALUE
+
+    check_status_transition(
+        WAIT_SELLER_SERVICE,
+        WAIT_BUYER_APPROVE,
+        SELLER,
+        seller_confirm_service_tx.events
+    )
+
+    revert_all_withdraw(se)
+
+    with reverts(FAIL):
+        se.approve_receipt({"from": SELLER})
+    with reverts(FAIL):
+        se.approve_receipt({"from": ARBITER})
+    
+    old_escrow_balance = se.balance()
+    old_seller_balance = SELLER.balance()
+
+    buyer_approve_receipt_tx = se.approve_receipt({"from": BUYER})
+    assert SELLER.balance() == old_seller_balance + VALUE
+    assert se.status() == DONE
+    assert se.balance() == old_escrow_balance - VALUE
+
+    check_status_transition(
+        WAIT_BUYER_APPROVE,
+        DONE,
+        BUYER,
+        buyer_approve_receipt_tx.events
+    )
+    
+    revert_all_withdraw(se)
+
