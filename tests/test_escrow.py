@@ -1,6 +1,6 @@
 from telnetlib import DO
 import pytest
-from brownie import escrow as Escrow, factory as Factory, accounts, web3, network, chain, reverts
+from brownie import escrow as Escrow, factory as Factory, accounts, web3, network, chain, reverts, Contract
 
 network.connect("development")
 
@@ -55,7 +55,6 @@ def test_buyer_escrow(buyer_escrow):
     assert be.expired_at() == chain[-1].timestamp + EXPIRATION_SECONDS
     assert be.value() == VALUE
     assert be.status() == WAIT_SELLER_APPROVE
-    print(chain[-1].timestamp + EXPIRATION_SECONDS)
     with reverts(FAIL):
         be.approve_deal_terms({'from': BUYER})
     with reverts(FAIL):
@@ -158,7 +157,6 @@ def test_seller_escrow(seller_escrow):
     assert se.expired_at() == chain[-1].timestamp + EXPIRATION_SECONDS
     assert se.value() == VALUE
     assert se.status() == WAIT_BUYER_DEPOSIT
-    print(chain[-1].timestamp)
     with reverts(FAIL):
         se.deposit({"from": SELLER, "value": VALUE})
     with reverts(DEPOSIT_FAILURE):
@@ -207,7 +205,6 @@ def test_seller_escrow(seller_escrow):
     assert SELLER.balance() == old_seller_balance + VALUE
     assert se.status() == DONE
     assert se.balance() == old_escrow_balance - VALUE
-
     check_status_transition(
         WAIT_BUYER_APPROVE,
         DONE,
@@ -217,3 +214,209 @@ def test_seller_escrow(seller_escrow):
     
     revert_all_withdraw(se)
 
+"""Withdraw test"""
+
+@pytest.fixture
+def seller_escrow():
+    yield Escrow.deploy(SELLER, BUYER, ARBITER, VALUE, EXPIRATION_SECONDS, {'from': SELLER})
+
+def test_withdraw_no_buyer(seller_escrow):
+    se = seller_escrow
+    buyer_deposit_tx = se.deposit({"from": BUYER, "value": VALUE})
+
+    revert_all_withdraw(se)
+
+    seller_confirm_service_tx = se.confirm_service({"from": SELLER})
+
+    revert_all_withdraw(se)
+
+    assert se.status() == WAIT_BUYER_APPROVE
+
+    old_escrow_balance = se.balance()
+    old_seller_balance = SELLER.balance()
+
+    chain.sleep(EXPIRATION_SECONDS) 
+    chain.mine(web3.eth.blockNumber + 1)
+    assert chain[-1].timestamp >= se.expired_at()
+
+    with reverts(FAIL):
+        se.withdraw({"from": BUYER})
+    with reverts(FAIL):
+        se.withdraw({"from": ARBITER})
+    
+    seller_withdraw_tx = se.withdraw({"from": SELLER})
+
+    assert SELLER.balance() == old_seller_balance + VALUE
+    assert se.status() == DONE
+    assert se.balance() == old_escrow_balance - VALUE
+
+    check_status_transition(
+        WAIT_BUYER_APPROVE,
+        DONE,
+        SELLER,
+        seller_withdraw_tx.events
+    )
+
+
+@pytest.fixture
+def buyer_escrow():
+    yield Escrow.deploy(SELLER, BUYER, ARBITER, VALUE, EXPIRATION_SECONDS, {'from': BUYER})
+
+def test_withdraw_no_arbiter(buyer_escrow):
+    be = buyer_escrow
+
+    seller_approve_tx = be.approve_deal_terms({'from': SELLER})
+
+    buyer_deposit_tx = be.deposit({"from": BUYER, "value": VALUE})
+
+    revert_all_withdraw(be)
+
+    seller_confirm_service_tx = be.confirm_service({"from": SELLER})
+
+    revert_all_withdraw(be)
+
+    with reverts(FAIL):
+        be.start_dispute({"from": SELLER})
+    with reverts(FAIL):
+        be.start_dispute({"from": ARBITER})
+
+    buyer_start_dispute_tx = be.start_dispute({"from": BUYER})
+
+    revert_all_withdraw(be)
+
+    assert be.status() == DISPUT
+    check_status_transition(
+        WAIT_BUYER_APPROVE,
+        DISPUT,
+        BUYER,
+        buyer_start_dispute_tx.events
+    )
+
+    old_escrow_balance = be.balance()
+    old_seller_balance = SELLER.balance()
+
+    chain.sleep(EXPIRATION_SECONDS) 
+    chain.mine(web3.eth.blockNumber + 1)
+    assert chain[-1].timestamp >= be.expired_at()
+
+    with reverts(FAIL):
+        be.withdraw({"from": BUYER})
+    with reverts(FAIL):
+        be.withdraw({"from": ARBITER})
+    
+    seller_withdraw_tx = be.withdraw({"from": SELLER})
+
+    assert SELLER.balance() == old_seller_balance + VALUE
+    assert be.status() == DONE
+    assert be.balance() == old_escrow_balance - VALUE
+
+    check_status_transition(
+        DISPUT,
+        DONE,
+        SELLER,
+        seller_withdraw_tx.events
+    )
+
+"""Dispute test"""
+
+@pytest.fixture
+def buyer_escrow():
+    yield Escrow.deploy(SELLER, BUYER, ARBITER, VALUE, EXPIRATION_SECONDS, {'from': BUYER})
+
+def test_refund_to_buyer(buyer_escrow):
+    be = buyer_escrow
+
+    seller_approve_tx = be.approve_deal_terms({'from': SELLER})
+
+    buyer_deposit_tx = be.deposit({"from": BUYER, "value": VALUE})
+
+    seller_confirm_service_tx = be.confirm_service({"from": SELLER})
+
+    with reverts(FAIL):
+        be.start_dispute({"from": SELLER})
+    with reverts(FAIL):
+        be.start_dispute({"from": ARBITER})
+
+    buyer_start_dispute_tx = be.start_dispute({"from": BUYER})
+    assert be.status() == DISPUT
+
+    revert_all_withdraw(be)
+
+    check_status_transition(
+        WAIT_BUYER_APPROVE,
+        DISPUT,
+        BUYER,
+        buyer_start_dispute_tx.events
+    )
+
+    old_escrow_balance = be.balance()
+    old_buyer_balance = BUYER.balance()
+
+    with reverts(FAIL):
+        be.refund_to_buyer({"from": BUYER})
+    with reverts(FAIL):
+        be.refund_to_buyer({"from": SELLER})
+
+    refund_to_buyer_tx = be.refund_to_buyer({"from": ARBITER})
+
+    assert be.status() == DONE
+    assert BUYER.balance() == old_buyer_balance + VALUE
+    assert be.balance() == old_escrow_balance - VALUE
+
+    check_status_transition(
+        DISPUT,
+        DONE,
+        ARBITER,
+        refund_to_buyer_tx.events
+    )
+
+@pytest.fixture
+def buyer_escrow():
+    yield Escrow.deploy(SELLER, BUYER, ARBITER, VALUE, EXPIRATION_SECONDS, {'from': BUYER})
+
+def test_payout_to_seller(buyer_escrow):
+    be = buyer_escrow
+
+    seller_approve_tx = be.approve_deal_terms({'from': SELLER})
+
+    buyer_deposit_tx = be.deposit({"from": BUYER, "value": VALUE})
+
+    seller_confirm_service_tx = be.confirm_service({"from": SELLER})
+
+    with reverts(FAIL):
+        be.start_dispute({"from": SELLER})
+    with reverts(FAIL):
+        be.start_dispute({"from": ARBITER})
+
+    buyer_start_dispute_tx = be.start_dispute({"from": BUYER})
+    assert be.status() == DISPUT
+
+    revert_all_withdraw(be)
+
+    check_status_transition(
+        WAIT_BUYER_APPROVE,
+        DISPUT,
+        BUYER,
+        buyer_start_dispute_tx.events
+    )
+
+    old_escrow_balance = be.balance()
+    old_seller_balance = SELLER.balance()
+
+    with reverts(FAIL):
+        be.payout_to_seller({"from": BUYER})
+    with reverts(FAIL):
+        be.payout_to_seller({"from": SELLER})
+    
+    payout_to_seller_tx = be.payout_to_seller({"from": ARBITER})
+
+    assert be.status() == DONE
+    assert SELLER.balance() == old_seller_balance + VALUE
+    assert be.balance() == old_escrow_balance - VALUE
+
+    check_status_transition(
+        DISPUT,
+        DONE,
+        ARBITER,
+        payout_to_seller_tx.events
+    )
